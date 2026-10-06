@@ -1,0 +1,54 @@
+from __future__ import annotations
+
+from .models import Level
+
+PHASE_1_3 = Level(
+    name="Capítulo 1 - Fase 3 (modelo inicial)",
+    graph={
+        "N0": ("N1",),
+        "N1": ("N0", "N2", "N6"),
+        "N2": ("N1", "N3", "N5", "N7"),
+        "N3": ("N2", "N4"),
+        "N4": ("N3", "N5"),
+        "N5": ("N2", "N4", "N6"),
+        "N6": ("N1", "N5"),
+        "N7": ("N2",),
+    },
+    start="N0",
+    goal="N7",
+    guards=frozenset({"N3"}),
+)
+
+
+PHASE_1_4 = Level(
+    name="Capítulo 1 - Fase 4 (modelo inicial)",
+    graph={
+        "N0": ("N1", "N4"),
+        "N1": ("N0", "N2", "N5"),
+        "N2": ("N1", "N3"),
+        "N3": ("N2", "N7"),
+        "N4": ("N0", "N5", "N9"),
+        "N5": ("N1", "N4", "N6", "N10"),
+        "N6": ("N5", "N11"),
+        "N7": ("N3", "N8", "N12"),
+        "N8": ("N7", "N13"),
+        "N9": ("N4", "N10", "N14"),
+        "N10": ("N5", "N9", "N11", "N15"),
+        "N11": ("N6", "N10", "N12", "N16"),
+        "N12": ("N7", "N11", "N13", "N17"),
+        "N13": ("N8", "N12"),
+        "N14": ("N9", "N15"),
+        "N15": ("N10", "N14", "N16"),
+        "N16": ("N11", "N15", "N17"),
+        "N17": ("N12", "N16"),
+    },
+    start="N0",
+    goal="N13",
+    guards=frozenset({"N3", "N5", "N6", "N10", "N11", "N12", "N14"}),
+)
+
+
+LEVELS = {
+    "1-3": PHASE_1_3,
+    "1-4": PHASE_1_4,
+}

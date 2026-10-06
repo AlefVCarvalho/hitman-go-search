@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping, FrozenSet
+from typing import FrozenSet, Mapping
 
 
 @dataclass(frozen=True, slots=True)
@@ -16,7 +16,7 @@ class Level:
     graph: Mapping[str, tuple[str, ...]]
     start: str
     goal: str
-    guards: FrozenSet[str]
+    guards: Mapping[str, str]
 
     def initial_state(self) -> State:
-        return State(self.start, self.guards)
+        return State(self.start, frozenset(self.guards))

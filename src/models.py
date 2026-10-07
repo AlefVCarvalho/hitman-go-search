@@ -8,14 +8,15 @@ from typing import FrozenSet, Mapping
 class MovingGuard:
     """Configuração fixa de um guarda que patrulha uma rota linear."""
 
+    name: str
     route: tuple[str, ...]
-    start_index: int = 0
+    start_index: int
     start_direction: int = 1
 
 
 @dataclass(frozen=True, slots=True)
 class MovingGuardState:
-    """Parte dinâmica de um guarda móvel armazenada no estado de busca."""
+    """Parte variável de um guarda móvel dentro de um estado de busca."""
 
     index: int
     direction: int
@@ -27,7 +28,7 @@ class State:
     position: str
     active_guards: FrozenSet[str]
     moving_guards: tuple[MovingGuardState, ...] = ()
-    has_briefcase: bool = False
+    briefcase_collected: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,13 +37,13 @@ class Level:
     graph: Mapping[str, tuple[str, ...]]
     start: str
     goal: str
-    guards: Mapping[str, str]
+    guards: Mapping[str, str | None]
     moving_guards: tuple[MovingGuard, ...] = ()
+    hiding_nodes: FrozenSet[str] = frozenset()
     briefcase: str | None = None
-    briefcase_required: bool = False
 
     def initial_state(self) -> State:
-        moving_states = tuple(
+        moving_state = tuple(
             MovingGuardState(
                 index=guard.start_index,
                 direction=guard.start_direction,
@@ -50,10 +51,9 @@ class Level:
             )
             for guard in self.moving_guards
         )
-
         return State(
             position=self.start,
             active_guards=frozenset(self.guards),
-            moving_guards=moving_states,
-            has_briefcase=(self.briefcase == self.start),
+            moving_guards=moving_state,
+            briefcase_collected=self.start == self.briefcase,
         )

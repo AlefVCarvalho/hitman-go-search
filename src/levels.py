@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from .models import Level
+from .models import Level, MovingGuard
+
 
 PHASE_1_3 = Level(
     name="Capítulo 1 - Fase 3",
@@ -58,40 +59,142 @@ PHASE_1_4 = Level(
 )
 
 
+# Fase 1-12
+#
+# A numeração acompanha a topologia do print estudado. N0 é o início,
+# N13 é a saída, N8 contém a maleta e N2/N10 são arbustos.
+# Os guardas amarelos patrulham linhas retas e invertem a direção nas pontas.
+PHASE_1_12 = Level(
+    name="Capítulo 1 - Fase 12",
+    graph={
+        "N0": ("N1", "N2"),
+        "N1": ("N0", "N14"),
+        "N2": ("N0", "N3", "N9", "N14"),
+        "N3": ("N2", "N4", "N6"),
+        "N4": ("N3", "N5", "N9"),
+        "N5": ("N4", "N6", "N8"),
+        "N6": ("N3", "N5", "N7"),
+        "N7": ("N6",),
+        "N8": ("N5",),
+        "N9": ("N2", "N4", "N10"),
+        "N10": ("N9", "N11", "N14"),
+        "N11": ("N10", "N12"),
+        "N12": ("N11", "N13", "N14"),
+        "N13": ("N12",),
+        "N14": ("N1", "N2", "N10", "N12"),
+    },
+    start="N0",
+    goal="N13",
+    guards={},
+    moving_guards=(
+        MovingGuard(
+            name="amarelo_esquerda",
+            route=("N1", "N14", "N10"),
+            start_index=1,
+            start_direction=1,
+        ),
+        MovingGuard(
+            name="amarelo_direita",
+            route=("N8", "N5", "N6", "N7"),
+            start_index=1,
+            start_direction=1,
+        ),
+    ),
+    hiding_nodes=frozenset({"N2", "N10"}),
+    briefcase="N8",
+)
+
+
+# Fase 1-15
+#
+# Esta fase combina guardas azuis estáticos, quatro guardas amarelos móveis,
+# um arbusto, uma maleta e o alvo vermelho como estado objetivo.
+PHASE_1_15 = Level(
+    name="Capítulo 1 - Fase 15",
+    graph={
+        "N0": ("N1", "N5"),
+        "N1": ("N0", "N2"),
+        "N2": ("N1", "N3", "N11"),
+        "N3": ("N2", "N4"),
+        "N4": ("N3", "N5", "N6"),
+        "N5": ("N0", "N4"),
+        "N6": ("N4", "N7"),
+        "N7": ("N6", "N15"),
+        "N8": ("N9",),
+        "N9": ("N8", "N10", "N11", "N22"),
+        "N10": ("N9",),
+        "N11": ("N2", "N9", "N12"),
+        "N12": ("N11", "N13"),
+        "N13": ("N12", "N14"),
+        "N14": ("N13", "N15", "N21"),
+        "N15": ("N7", "N14", "N16"),
+        "N16": ("N15", "N17"),
+        "N17": ("N16", "N18"),
+        "N18": ("N17", "N19", "N21"),
+        "N19": ("N18", "N20"),
+        "N20": ("N19", "N21", "N22"),
+        "N21": ("N14", "N18", "N20"),
+        "N22": ("N9", "N20", "N23"),
+        "N23": ("N22",),
+    },
+    start="N0",
+    goal="N23",
+    guards={
+        "N10": None,
+        "N13": "N12",
+        "N19": "N18",
+    },
+    moving_guards=(
+        MovingGuard(
+            name="amarelo_superior",
+            route=("N18", "N17", "N16"),
+            start_index=0,
+            start_direction=1,
+        ),
+        MovingGuard(
+            name="amarelo_sala_superior",
+            route=("N20", "N21", "N14", "N15"),
+            start_index=0,
+            start_direction=1,
+        ),
+        MovingGuard(
+            name="amarelo_corredor_central",
+            route=("N9", "N11", "N12"),
+            start_index=0,
+            start_direction=1,
+        ),
+        MovingGuard(
+            name="amarelo_corredor_inferior",
+            route=("N2", "N3", "N4", "N6"),
+            start_index=2,
+            start_direction=1,
+        ),
+    ),
+    hiding_nodes=frozenset({"N11"}),
+    briefcase="N7",
+)
+
+
 LEVELS = {
     "1-3": PHASE_1_3,
     "1-4": PHASE_1_4,
+    "1-12": PHASE_1_12,
+    "1-15": PHASE_1_15,
 }
-# Caso experimental controlado para introduzir duas novas dinâmicas:
-# - coleta obrigatória de maleta;
-# - guarda amarelo que patrulha uma rota linear e se move a cada turno.
-#
-# O layout é próprio do projeto e não é apresentado como reprodução exata de
-# uma fase específica de Hitman GO. As regras são inspiradas nas mecânicas do jogo.
-from .models import MovingGuard
 
-EXPERIMENTAL_MOVING_BRIEFCASE = Level(
-    name="Caso experimental - Maleta e guarda móvel",
-    graph={
-        "N0": ("N1", "N4"),
-        "N1": ("N0", "N2", "N4"),
-        "N2": ("N1", "N3", "N5"),
-        "N3": ("N2", "N6"),
-        "N4": ("N0", "N1", "N5", "N7"),
-        "N5": ("N2", "N4", "N6", "N8"),
-        "N6": ("N3", "N5", "N9"),
-        "N7": ("N4", "N8"),
-        "N8": ("N5", "N7", "N9"),
-        "N9": ("N6", "N8"),
-    },
-    start="N0",
-    goal="N3",
-    guards={},
-    moving_guards=(
-        MovingGuard(route=("N5", "N6", "N9"), start_index=0, start_direction=1),
+
+# Os três grupos experimentais definidos para o trabalho.
+TEST_CASES = {
+    "1": (
+        ("1-3", False),
+        ("1-4", False),
     ),
-    briefcase="N7",
-    briefcase_required=True,
-)
-
-LEVELS["moving-briefcase"] = EXPERIMENTAL_MOVING_BRIEFCASE
+    "2": (
+        ("1-12", False),
+        ("1-15", False),
+    ),
+    "3": (
+        ("1-12", True),
+        ("1-15", True),
+    ),
+}

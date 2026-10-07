@@ -7,7 +7,7 @@ import itertools
 import time
 
 from .models import Level, State
-from .problem import heuristic_cost, is_goal, successors
+from .problem import is_goal, relaxed_heuristic, successors
 
 
 @dataclass(slots=True)
@@ -20,6 +20,7 @@ class SearchResult:
     generated: int
     max_frontier: int
     elapsed_seconds: float
+    require_briefcase: bool = False
 
 
 def _reconstruct_path(
@@ -37,7 +38,7 @@ def _reconstruct_path(
     return path
 
 
-def bfs(level: Level) -> SearchResult:
+def bfs(level: Level, require_briefcase: bool = False) -> SearchResult:
     start_time = time.perf_counter()
     start = level.initial_state()
 
@@ -55,7 +56,7 @@ def bfs(level: Level) -> SearchResult:
         state = frontier.popleft()
         expanded += 1
 
-        if is_goal(level, state):
+        if is_goal(level, state, require_briefcase):
             path = _reconstruct_path(parents, state)
             return SearchResult(
                 algorithm="BFS",
@@ -66,6 +67,7 @@ def bfs(level: Level) -> SearchResult:
                 generated=generated,
                 max_frontier=max_frontier,
                 elapsed_seconds=time.perf_counter() - start_time,
+                require_briefcase=require_briefcase,
             )
 
         for action, next_state, _ in successors(level, state):
@@ -87,16 +89,18 @@ def bfs(level: Level) -> SearchResult:
         generated=generated,
         max_frontier=max_frontier,
         elapsed_seconds=time.perf_counter() - start_time,
+        require_briefcase=require_briefcase,
     )
 
 
-def astar(level: Level) -> SearchResult:
+def astar(level: Level, require_briefcase: bool = False) -> SearchResult:
     start_time = time.perf_counter()
     start = level.initial_state()
 
     counter = itertools.count()
     frontier: list[tuple[int, int, int, State]] = []
-    heapq.heappush(frontier, (heuristic_cost(level, start), 0, next(counter), start))
+    start_h = relaxed_heuristic(level, start, require_briefcase)
+    heapq.heappush(frontier, (start_h, 0, next(counter), start))
 
     g_score: dict[State, int] = {start: 0}
     parents: dict[State, tuple[State | None, str | None]] = {
@@ -115,7 +119,7 @@ def astar(level: Level) -> SearchResult:
 
         expanded += 1
 
-        if is_goal(level, state):
+        if is_goal(level, state, require_briefcase):
             path = _reconstruct_path(parents, state)
             return SearchResult(
                 algorithm="A*",
@@ -126,6 +130,7 @@ def astar(level: Level) -> SearchResult:
                 generated=generated,
                 max_frontier=max_frontier,
                 elapsed_seconds=time.perf_counter() - start_time,
+                require_briefcase=require_briefcase,
             )
 
         for action, next_state, step_cost in successors(level, state):
@@ -136,7 +141,7 @@ def astar(level: Level) -> SearchResult:
 
             g_score[next_state] = tentative_g
             parents[next_state] = (state, action)
-            h = heuristic_cost(level, next_state)
+            h = relaxed_heuristic(level, next_state, require_briefcase)
             heapq.heappush(
                 frontier,
                 (tentative_g + h, tentative_g, next(counter), next_state),
@@ -154,4 +159,5 @@ def astar(level: Level) -> SearchResult:
         generated=generated,
         max_frontier=max_frontier,
         elapsed_seconds=time.perf_counter() - start_time,
+        require_briefcase=require_briefcase,
     )

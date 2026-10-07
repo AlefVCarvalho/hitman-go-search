@@ -7,7 +7,7 @@ import itertools
 import time
 
 from .models import Level, State
-from .problem import is_goal, relaxed_distances_to_goal, successors
+from .problem import heuristic_cost, is_goal, successors
 
 
 @dataclass(slots=True)
@@ -93,11 +93,10 @@ def bfs(level: Level) -> SearchResult:
 def astar(level: Level) -> SearchResult:
     start_time = time.perf_counter()
     start = level.initial_state()
-    heuristic = relaxed_distances_to_goal(level)
 
     counter = itertools.count()
     frontier: list[tuple[int, int, int, State]] = []
-    heapq.heappush(frontier, (heuristic[start.position], 0, next(counter), start))
+    heapq.heappush(frontier, (heuristic_cost(level, start), 0, next(counter), start))
 
     g_score: dict[State, int] = {start: 0}
     parents: dict[State, tuple[State | None, str | None]] = {
@@ -137,7 +136,7 @@ def astar(level: Level) -> SearchResult:
 
             g_score[next_state] = tentative_g
             parents[next_state] = (state, action)
-            h = heuristic.get(next_state.position, 0)
+            h = heuristic_cost(level, next_state)
             heapq.heappush(
                 frontier,
                 (tentative_g + h, tentative_g, next(counter), next_state),

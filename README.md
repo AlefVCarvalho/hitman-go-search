@@ -138,3 +138,28 @@ Para cada estratégia são exibidos:
 - tempo de execução.
 
 Essas métricas servirão como base para a comparação experimental entre as duas estratégias.
+
+## Versão com maleta e guarda móvel
+
+Foi adicionado o caso `moving-briefcase` para aumentar o espaço de estados e introduzir duas novas informações dinâmicas no problema:
+
+- **maleta obrigatória:** alcançar a saída só caracteriza um estado objetivo se a maleta já tiver sido coletada;
+- **guarda móvel:** um guarda percorre uma rota linear, avançando uma posição após cada movimento do agente e invertendo o sentido ao atingir uma extremidade.
+
+Para cada guarda móvel são armazenados apenas os dados que mudam durante a busca: posição na rota, sentido do movimento e se o guarda continua ativo. A rota em si pertence à definição da fase e não é duplicada em cada estado.
+
+### Heurística do A* com maleta
+
+Se a maleta ainda não foi coletada, a heurística usa:
+
+```text
+h(n) = d(posição, maleta) + d(maleta, saída)
+```
+
+Depois da coleta:
+
+```text
+h(n) = d(posição, saída)
+```
+
+As distâncias são calculadas no grafo ignorando os guardas. Dessa forma, o problema relaxado remove restrições do problema real e fornece uma estimativa otimista do custo restante.

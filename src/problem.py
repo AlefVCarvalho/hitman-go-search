@@ -25,19 +25,43 @@ def watched_by_static_guard(level: Level, state: State, node: str) -> bool:
     )
 
 
-def _moving_guard_position(level: Level, guard_index: int, guard_state: MovingGuardState) -> str:
+def _moving_guard_position(
+    level: Level,
+    guard_index: int,
+    guard_state: MovingGuardState,
+) -> str:
     return level.moving_guards[guard_index].route[guard_state.index]
 
 
-def _moving_guard_front(level: Level, guard_index: int, guard_state: MovingGuardState) -> str | None:
+def _moving_guard_front(
+    level: Level,
+    guard_index: int,
+    guard_state: MovingGuardState,
+) -> str | None:
+    """Retorna o nó para o qual o guarda está olhando neste instante.
+
+    Nas extremidades da rota, a direção é interpretada como já invertida: o
+    guarda não consome um turno parado apenas para virar.
+    """
     guard = level.moving_guards[guard_index]
-    next_index = guard_state.index + guard_state.direction
-    if 0 <= next_index < len(guard.route):
-        return guard.route[next_index]
-    return None
+    if len(guard.route) <= 1:
+        return None
+
+    direction = guard_state.direction
+    next_index = guard_state.index + direction
+    if not 0 <= next_index < len(guard.route):
+        direction *= -1
+        next_index = guard_state.index + direction
+
+    return guard.route[next_index]
 
 
-def _advance_moving_guard(level: Level, guard_index: int, guard_state: MovingGuardState) -> MovingGuardState:
+def _advance_moving_guard(
+    level: Level,
+    guard_index: int,
+    guard_state: MovingGuardState,
+) -> MovingGuardState:
+    """Move um guarda uma casa, invertendo imediatamente nas extremidades."""
     if not guard_state.active:
         return guard_state
 
@@ -58,17 +82,22 @@ def _advance_moving_guard(level: Level, guard_index: int, guard_state: MovingGua
 def apply_move(level: Level, state: State, destination: str) -> State | None:
     """Aplica um turno completo de forma determinística.
 
-    A resolução usada para os guardas amarelos foi escolhida para reproduzir
-    as sequências conhecidas das fases estudadas: ao iniciar um turno, os
-    guardas móveis avançam uma posição; em seguida é resolvido o movimento do
-    agente para o nó escolhido. No estado resultante, o agente não pode ficar
-    no campo de visão frontal de um guarda, exceto quando está em um arbusto.
+    Ordem de um turno:
+    1. o agente se move;
+    2. resolve-se a interação imediata com guardas no destino e a visão dos
+       guardas estáticos;
+    3. guardas amarelos ativos avançam uma casa;
+    4. resolve-se colisão e campo de visão após o movimento dos amarelos.
 
-    Regras simplificadas:
-    - guarda estático/móvel pode ser eliminado pelas costas ou lateral;
-    - abordagem frontal é derrota;
-    - guardas móveis avançam uma posição por turno e invertem nas pontas;
-    - arbustos bloqueiam a detecção, mas não tornam o nó inexistente;
+    Regras usadas no modelo:
+    - cada ação do agente custa 1 turno;
+    - atacar um guarda pela frente resulta em derrota;
+    - entrar lateralmente ou por trás elimina o guarda;
+    - guardas amarelos movem uma casa por turno;
+    - ao chegar ao extremo da rota, invertem a direção e já se deslocam no
+      turno seguinte, sem gastar um turno apenas para virar;
+    - arbustos impedem detecção e permitem que guardas atravessem o nó sem
+      detectar o agente escondido;
     - a maleta é coletada automaticamente ao visitar seu nó.
     """
     if destination not in level.graph[state.position]:
@@ -76,16 +105,11 @@ def apply_move(level: Level, state: State, destination: str) -> State | None:
             f"Movimento inválido: {state.position} -> {destination} não é uma aresta."
         )
 
-    # Primeiro atualiza a patrulha dos guardas móveis. O agente deixa seu nó
-    # atual no mesmo turno, portanto não há colisão com a posição antiga.
-    moving_states = [
-        _advance_moving_guard(level, index, guard_state)
-        for index, guard_state in enumerate(state.moving_guards)
-    ]
-
     active_guards = state.active_guards
+    moving_states = list(state.moving_guards)
 
-    # Interação com guarda estático no nó de destino.
+    # 1) O agente se move primeiro.
+    # Interação com guarda azul no nó de destino.
     if destination in active_guards:
         if level.guards[destination] == state.position:
             return None
@@ -93,7 +117,7 @@ def apply_move(level: Level, state: State, destination: str) -> State | None:
             guard for guard in active_guards if guard != destination
         )
 
-    # Interação com guarda móvel já na nova posição da patrulha.
+    # Interação com guarda amarelo ainda em sua posição anterior ao movimento.
     for index, guard_state in enumerate(moving_states):
         if not guard_state.active:
             continue
@@ -111,16 +135,50 @@ def apply_move(level: Level, state: State, destination: str) -> State | None:
 
     briefcase_collected = state.briefcase_collected or destination == level.briefcase
 
-    next_state = State(
+    after_agent = State(
         position=destination,
         active_guards=active_guards,
         moving_guards=tuple(moving_states),
         briefcase_collected=briefcase_collected,
     )
 
-    if watched_by_static_guard(level, next_state, destination):
+    # Um guarda azul pode vigiar o nó alcançado pelo agente.
+    if watched_by_static_guard(level, after_agent, destination):
         return None
 
+    # Antes de se moverem, guardas amarelos ainda ativos também podem estar
+    # olhando diretamente para o agente. Arbustos bloqueiam essa detecção.
+    if destination not in level.hiding_nodes:
+        for index, guard_state in enumerate(after_agent.moving_guards):
+            if not guard_state.active:
+                continue
+            if _moving_guard_front(level, index, guard_state) == destination:
+                return None
+
+    # 2) Depois da ação do jogador, os guardas amarelos avançam.
+    advanced_states = tuple(
+        _advance_moving_guard(level, index, guard_state)
+        for index, guard_state in enumerate(after_agent.moving_guards)
+    )
+
+    next_state = State(
+        position=destination,
+        active_guards=active_guards,
+        moving_guards=advanced_states,
+        briefcase_collected=briefcase_collected,
+    )
+
+    # Fora de um arbusto, um guarda que termina no mesmo nó captura o agente.
+    for index, guard_state in enumerate(next_state.moving_guards):
+        if not guard_state.active:
+            continue
+        if (
+            _moving_guard_position(level, index, guard_state) == destination
+            and destination not in level.hiding_nodes
+        ):
+            return None
+
+    # Após andar, um guarda pode terminar olhando para o agente.
     if destination not in level.hiding_nodes:
         for index, guard_state in enumerate(next_state.moving_guards):
             if not guard_state.active:
@@ -129,6 +187,7 @@ def apply_move(level: Level, state: State, destination: str) -> State | None:
                 return None
 
     return next_state
+
 
 def successors(level: Level, state: State) -> Iterable[tuple[str, State, int]]:
     for destination in level.graph[state.position]:
@@ -139,7 +198,10 @@ def successors(level: Level, state: State) -> Iterable[tuple[str, State, int]]:
 
 
 @lru_cache(maxsize=None)
-def _distances_from(graph_items: tuple[tuple[str, tuple[str, ...]], ...], source: str) -> dict[str, int]:
+def _distances_from(
+    graph_items: tuple[tuple[str, tuple[str, ...]], ...],
+    source: str,
+) -> dict[str, int]:
     graph = dict(graph_items)
     distance = {source: 0}
     queue = deque([source])
@@ -155,15 +217,21 @@ def _distances_from(graph_items: tuple[tuple[str, tuple[str, ...]], ...], source
 
 
 def relaxed_distances(level: Level, source: str) -> dict[str, int]:
-    graph_items = tuple(sorted((node, tuple(neighbors)) for node, neighbors in level.graph.items()))
+    graph_items = tuple(
+        sorted((node, tuple(neighbors)) for node, neighbors in level.graph.items())
+    )
     return _distances_from(graph_items, source)
 
 
-def relaxed_heuristic(level: Level, state: State, require_briefcase: bool = False) -> int:
-    """Heurística de menor distância ignorando todos os guardas.
+def relaxed_heuristic(
+    level: Level,
+    state: State,
+    require_briefcase: bool = False,
+) -> int:
+    """Menor distância no grafo ignorando todos os guardas.
 
     Quando a maleta é obrigatória e ainda não foi coletada, soma:
-      posição -> maleta + maleta -> objetivo.
+        posição -> maleta + maleta -> objetivo.
     """
     to_goal = relaxed_distances(level, level.goal)
 

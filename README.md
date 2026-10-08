@@ -64,17 +64,13 @@ Guardas azuis permanecem no mesmo nó e possuem uma direção de observação. U
 
 ### Guardas móveis
 
-Guardas amarelos possuem uma rota linear. A cada turno eles:
+Guardas amarelos possuem uma rota linear. Em cada turno cada guarda amarelo ativo avança uma posição. Ao atingir uma extremidade da rota, o guarda inverte o sentido.
 
-1. avançam uma posição;
-2. invertem o sentido ao atingir uma extremidade;
-3. mantêm uma direção frontal de observação.
-
-A atualização da patrulha e o movimento do agente são resolvidos de forma determinística pelo simulador.
+A orientação frontal acompanha o sentido da patrulha e é usada nas interações com o agente.
 
 ### Arbustos
 
-Alguns nós representam arbustos. Neles, o agente não é detectado pelo campo de visão frontal dos guardas.
+Alguns nós representam arbustos. Neles, o agente não é detectado pelo campo de visão frontal dos guardas e um guarda móvel pode atravessar o mesmo nó sem detectar o agente escondido.
 
 ### Maleta
 
@@ -119,8 +115,8 @@ As distâncias são calculadas no grafo ignorando os guardas. Dessa forma, a heu
 |---|---|
 | `1-3` | Guarda estático e objetivo final |
 | `1-4` | Vários guardas estáticos e maior quantidade de caminhos |
-| `1-12` | Guardas móveis, arbustos, maleta e objetivo final |
-| `1-15` | Guardas estáticos e móveis, arbusto, maleta e objetivo final |
+| `1-12` | 2 guardas móveis, arbustos, maleta e saída |
+| `1-15` | 3 guardas estáticos, 4 móveis, arbusto, maleta e saída |
 
 ## Casos experimentais
 

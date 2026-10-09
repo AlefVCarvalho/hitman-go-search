@@ -1,3 +1,4 @@
+# Define os níveis, grafos, guardas e grupos experimentais usados pelo projeto.
 from __future__ import annotations
 
 from .models import Level, MovingGuard
@@ -59,11 +60,6 @@ PHASE_1_4 = Level(
 )
 
 
-# Fase 1-12
-#
-# Numeração fornecida a partir do tabuleiro: N0 é o início, N14 é a saída,
-# N13 contém a maleta e N5/N9 são arbustos. Os dois guardas amarelos
-# patrulham as rotas lineares informadas e se movem depois do agente.
 PHASE_1_12 = Level(
     name="Capítulo 1 - Fase 12",
     graph={
@@ -79,7 +75,6 @@ PHASE_1_12 = Level(
         "N9": ("N8", "N10"),
         "N10": ("N9", "N11"),
         "N11": ("N10", "N6", "N12"),
-        # A conexão N11-N12 aparece no tabuleiro; foi incluída nos dois sentidos.
         "N12": ("N7", "N11", "N13"),
         "N13": ("N12",),
         "N14": ("N3",),
@@ -106,11 +101,6 @@ PHASE_1_12 = Level(
 )
 
 
-# Fase 1-15
-#
-# N0 é o início, N22 é a saída, N12 contém a maleta e N9 é arbusto.
-# Os guardas azuis são estáticos. Os amarelos usam posição e direção iniciais
-# observadas no tabuleiro e patrulham as rotas fornecidas pelo usuário.
 PHASE_1_15 = Level(
     name="Capítulo 1 - Fase 15",
     graph={
@@ -150,25 +140,25 @@ PHASE_1_15 = Level(
             name="amarelo_N8",
             route=("N3", "N8", "N13", "N22"),
             start_index=1,
-            start_direction=-1,  # olhando para N3
+            start_direction=-1,
         ),
         MovingGuard(
             name="amarelo_N6",
             route=("N4", "N5", "N6", "N7"),
             start_index=2,
-            start_direction=-1,  # olhando para N5
+            start_direction=-1,
         ),
         MovingGuard(
             name="amarelo_N14",
             route=("N13", "N14", "N15", "N16", "N17"),
             start_index=1,
-            start_direction=1,   # olhando para N15
+            start_direction=1,
         ),
         MovingGuard(
             name="amarelo_N19",
             route=("N18", "N19", "N20", "N21"),
             start_index=1,
-            start_direction=-1,  # olhando para N18
+            start_direction=-1,
         ),
     ),
     hiding_nodes=frozenset({"N9"}),
@@ -184,7 +174,6 @@ LEVELS = {
 }
 
 
-# Três grupos experimentais definidos para o trabalho.
 TEST_CASES = {
     "1": (
         ("1-3", False),

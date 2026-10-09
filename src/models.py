@@ -1,3 +1,4 @@
+# Define as estruturas de dados que representam níveis, estados e guardas móveis.
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -6,8 +7,6 @@ from typing import FrozenSet, Mapping
 
 @dataclass(frozen=True, slots=True)
 class MovingGuard:
-    """Configuração fixa de um guarda que patrulha uma rota linear."""
-
     name: str
     route: tuple[str, ...]
     start_index: int
@@ -16,8 +15,6 @@ class MovingGuard:
 
 @dataclass(frozen=True, slots=True)
 class MovingGuardState:
-    """Parte variável de um guarda móvel dentro de um estado de busca."""
-
     index: int
     direction: int
     active: bool = True

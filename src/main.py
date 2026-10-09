@@ -1,3 +1,4 @@
+# Fornece a interface de linha de comando e exibe os resultados das buscas.
 from __future__ import annotations
 
 import argparse

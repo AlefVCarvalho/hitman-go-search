@@ -187,17 +187,3 @@ def relaxed_distances(level: Level, source: str) -> dict[str, int]:
         sorted((node, tuple(neighbors)) for node, neighbors in level.graph.items())
     )
     return _distances_from(graph_items, source)
-
-
-def relaxed_heuristic(
-    level: Level,
-    state: State,
-    require_briefcase: bool = False,
-) -> int:
-    to_goal = relaxed_distances(level, level.goal)
-
-    if require_briefcase and level.briefcase and not state.briefcase_collected:
-        to_briefcase = relaxed_distances(level, level.briefcase)
-        return to_briefcase[state.position] + to_goal[level.briefcase]
-
-    return to_goal[state.position]

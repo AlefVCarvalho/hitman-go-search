@@ -11,8 +11,7 @@ O domínio escolhido é inspirado em **Hitman GO**. O cenário é representado c
 - [Modelagem](#modelagem)
 - [Regras implementadas](#regras-implementadas)
 - [Estratégias de busca](#estratégias-de-busca)
-  - [BFS](#bfs)
-  - [A*](#a)
+- [Fases Modeladas](#fases-modeladas)
 - [Casos experimentais](#casos-experimentais)
 - [Estrutura do projeto](#estrutura-do-projeto)
 - [Como executar](#como-executar)
@@ -23,7 +22,13 @@ O domínio escolhido é inspirado em **Hitman GO**. O cenário é representado c
 
 Encontrar uma sequência válida de movimentos que leve o agente da posição inicial até o objetivo final com o menor número de turnos possível.
 
-Nas fases em que o experimento exige a maleta, ela deve ser coletada antes da conclusão da fase.
+Nas fases que possuem maleta, o experimento também pode exigir que a maleta seja coletada antes da conclusão.
+
+Cada movimento entre dois nós adjacentes possui custo `1`.
+
+<img width="780" height="533" alt="image" src="https://github.com/user-attachments/assets/6bcdd2c5-13c5-414e-9ea6-1345628a2fe9" />
+
+_“Exemplo de fase utilizada como problema de busca”_
 
 ## Classificação do problema
 
@@ -45,117 +50,141 @@ Os guardas não são tratados como agentes adversariais independentes. Eles faze
 
 ## Modelagem
 
-A modelagem separa os dados fixos de cada fase das informações que mudam durante a busca.
+O mapa de cada fase é representado por um grafo:
 
-### Mapa
+```text
+G = (V, E)
+```
 
-> **`G = (V, E)`** — `V` representa o conjunto de posições válidas do tabuleiro e `E` representa as conexões que permitem o deslocamento entre duas posições.
+- `V`: posições válidas do tabuleiro;
+- `E`: caminhos permitidos entre duas posições.
 
-O grafo, as rotas dos guardas, os arbustos, a posição da maleta e o objetivo são dados fixos da fase e não são duplicados em cada estado da busca.
+Com a inclusão dos guardas móveis e da maleta, o estado pode ser resumido como:
 
-### Estado
+```text
+s = (p, Ge, Gm, b)
+```
 
-> **`s = (p, Ge, Gm, b)`** — `p` é a posição atual do agente; `Ge` representa os guardas estáticos ainda ativos; `Gm` representa a configuração dos guardas móveis, incluindo posição, direção e situação; `b` indica se a maleta já foi coletada.
+onde:
 
-O estado inicial é construído com o agente no nó inicial da fase, todos os guardas ativos em suas configurações iniciais e a maleta ainda não coletada.
+- `p`: posição atual do agente;
+- `Ge`: configuração dos guardas estáticos ainda ativos;
+- `Gm`: posição, sentido e situação dos guardas móveis;
+- `b`: indica se a maleta já foi coletada.
 
-### Operadores e custo
+As rotas completas dos guardas e o grafo da fase são dados fixos e **não são duplicados em cada estado**.
 
-> **`mover(p, q)`**, com **`q ∈ Adj(p)`** — o agente pode mover-se de `p` para qualquer nó adjacente `q`, desde que a transição resulte em um estado válido segundo as regras do ambiente.
->
-> **`c(p, q) = 1`** — cada movimento realizado pelo agente corresponde a um turno e possui custo unitário.
+<img width="500" height="500" alt="de068378-5a88-4c6f-8aee-b607008e8e54" src="https://github.com/user-attachments/assets/d17ad214-25fc-431d-a939-2c387098bc04" />
 
-### Estado objetivo
-
-> **Modo normal:** `objetivo(s) ⇔ p = goal`
->
-> **Modo com maleta:** `objetivo(s) ⇔ (p = goal) ∧ (b = verdadeiro)`
-
-Assim, o custo de uma solução corresponde ao número total de movimentos do agente até atingir um estado objetivo válido.
+_“Exemplo da numerção utilizada na transcrição da fase”_
 
 ## Regras implementadas
 
-### Ordem de um turno
-
-1. O agente escolhe e executa um movimento para um nó adjacente.
-2. São resolvidos encontros e campos de visão relacionados à nova posição do agente.
-3. Os guardas amarelos ativos realizam seu movimento de patrulha.
-4. São verificadas novamente colisões e situações de detecção após o movimento dos guardas.
-5. O estado resultante é utilizado como sucessor na busca.
-
 ### Guardas estáticos
 
-Os guardas azuis permanecem no mesmo nó e possuem uma direção de observação. Entrar frontalmente em sua área de ataque causa derrota. Uma aproximação válida pelas costas ou lateral elimina o guarda, que deixa de fazer parte dos estados seguintes.
+Guardas azuis permanecem no mesmo nó e possuem uma direção de observação. Uma aproximação frontal causa derrota; uma aproximação válida pelas costas ou lateral elimina o guarda.
 
 ### Guardas móveis
 
-Os guardas amarelos patrulham uma rota linear conhecida. Após o movimento do agente, cada guarda amarelo ativo avança uma posição em sua rota. Ao chegar a uma extremidade, ele inverte a direção imediatamente e continua a patrulha no turno seguinte, sem gastar um turno apenas para virar.
+Guardas amarelos possuem uma rota linear. Em cada turno cada guarda amarelo ativo avança uma posição. Ao atingir uma extremidade da rota, o guarda inverte o sentido.
 
-A direção da patrulha também determina a orientação frontal utilizada nas interações com o agente. Um guarda móvel pode ser eliminado quando a aproximação é válida e deixa de se mover nos estados seguintes.
+A orientação frontal acompanha o sentido da patrulha e é usada nas interações com o agente.
 
 ### Arbustos
 
-Alguns nós representam arbustos. Quando o agente está escondido em um desses nós, não é detectado pelo campo de visão frontal e um guarda móvel pode atravessar a mesma posição sem capturá-lo.
+Alguns nós representam arbustos. Neles, o agente não é detectado pelo campo de visão frontal dos guardas e um guarda móvel pode atravessar o mesmo nó sem detectar o agente escondido.
 
 ### Maleta
 
-A maleta é coletada automaticamente quando o agente visita o nó em que ela está localizada. A coleta altera o estado e permanece registrada nos estados seguintes.
+A maleta é coletada automaticamente quando o agente visita seu nó.
 
-No modo padrão, a busca termina ao alcançar a saída. Quando a opção `--briefcase` está ativa, a saída somente é aceita como estado objetivo se a maleta já tiver sido coletada.
+No modo normal, basta alcançar o objetivo final. No modo `--briefcase`, o estado objetivo exige que a maleta seja coletada antes do agente chegar à saída.
 
 ## Estratégias de busca
 
-As duas estratégias utilizam exatamente a mesma modelagem, regras de transição e casos experimentais. A diferença está apenas na forma como escolhem qual estado explorar a seguir.
-
 ### BFS
 
-A **Breadth-First Search (BFS)** é utilizada como estratégia de busca não informada. Ela mantém uma fila FIFO e expande os estados em níveis crescentes de profundidade.
-
-Como todas as ações possuem custo `1`, o primeiro estado objetivo encontrado pela BFS corresponde a uma solução de custo mínimo.
+A **Breadth-First Search** é a estratégia não informada. Como todas as ações possuem custo unitário, a primeira solução encontrada possui custo mínimo dentro da modelagem utilizada.
 
 ### A*
 
-O **A\*** utiliza uma função de avaliação que combina o custo já percorrido com uma estimativa do custo restante:
+O A* utiliza:
 
-> **`f(n) = g(n) + h(n)`** — `g(n)` é o número de movimentos realizados desde o estado inicial até `n`; `h(n)` estima quantos movimentos ainda são necessários para alcançar o objetivo.
+```text
+f(n) = g(n) + h(n)
+```
 
-A heurística utiliza as menores distâncias no grafo da fase, desconsiderando os guardas e demais restrições dinâmicas.
+- `g(n)`: quantidade de movimentos realizados;
+- `h(n)`: estimativa do custo restante.
 
-> **Sem maleta obrigatória ou após a coleta:** `h(n) = d(p, goal)` — `d(p, goal)` é a menor distância entre a posição atual `p` e a saída.
->
-> **Com maleta obrigatória ainda não coletada:** `h(n) = d(p, m) + d(m, goal)` — `m` é o nó da maleta; a estimativa considera o menor caminho até ela e, em seguida, até a saída.
+Sem exigência de maleta:
 
-Ao ignorar os guardas, a heurística resolve uma versão relaxada do problema. Ela não acrescenta desvios causados pelas ameaças do ambiente e, portanto, fornece uma estimativa otimista do custo restante. Para esta modelagem com custos unitários, a heurística é admissível e consistente.
+```text
+h(n) = distância(posição, objetivo)
+```
+
+Com maleta obrigatória ainda não coletada:
+
+```text
+h(n) = distância(posição, maleta) + distância(maleta, objetivo)
+```
+
+As distâncias são calculadas no grafo ignorando os guardas. Dessa forma, a heurística trabalha sobre uma versão relaxada do problema.
+
+## Fases modeladas
+
+| Fase | Elementos principais |
+|---|---|
+| `1-3` | Guarda estático e objetivo final |
+| `1-4` | Vários guardas estáticos e maior quantidade de caminhos |
+| `1-12` | 2 guardas móveis, arbustos, maleta e saída |
+| `1-15` | 3 guardas estáticos, 4 móveis, arbusto, maleta e saída |
 
 ## Casos experimentais
 
-Os quatro níveis modelados são distribuídos em três grupos de teste com dificuldade crescente. As mesmas instâncias são executadas com BFS e A* para permitir uma comparação direta.
-
-| Teste | Fases | Elementos principais | Critério de sucesso |
-|---|---|---|---|
-| **1** | `1-3` e `1-4` | Guardas estáticos | Alcançar a saída |
-| **2** | `1-12` e `1-15` | Guardas móveis, guardas estáticos e arbustos | Alcançar a saída |
-| **3** | `1-12` e `1-15` | Mesmas mecânicas do Teste 2 + maleta obrigatória | Coletar a maleta e alcançar a saída |
+Para a avaliação foram organizados três grupos com dificuldade crescente:
 
 ### Teste 1 — guardas estáticos
 
+- fase `1-3`;
+- fase `1-4`;
+- sucesso ao alcançar o objetivo final.
+
+Execute as fases:
+
 ```bash
-python -m src.main --test 1
+python -m src.main --level 1-3
+python -m src.main --level 1-4
 ```
 
 ### Teste 2 — guardas móveis
 
+- fase `1-12`;
+- fase `1-15`;
+- sucesso ao alcançar o objetivo final;
+- a coleta da maleta não é obrigatória.
+
+Execute as fases sem exigir a maleta:
+
 ```bash
-python -m src.main --test 2
+python -m src.main --level 1-12
+python -m src.main --level 1-15
 ```
 
 ### Teste 3 — guardas móveis + maleta obrigatória
 
+- fase `1-12`;
+- fase `1-15`;
+- o agente deve coletar a maleta e depois alcançar o objetivo final.
+
+Execute as mesmas fases com a maleta obrigatória:
+
 ```bash
-python -m src.main --test 3
+python -m src.main --level 1-12 --briefcase
+python -m src.main --level 1-15 --briefcase
 ```
 
-Essa organização aumenta gradualmente a quantidade de informação armazenada no estado e as restrições que precisam ser consideradas durante a busca.
+Esse agrupamento permite aumentar gradualmente a quantidade de informação do estado e a quantidade de restrições consideradas durante a busca.
 
 ## Estrutura do projeto
 
@@ -163,7 +192,7 @@ Essa organização aumenta gradualmente a quantidade de informação armazenada 
 hitman-go-search/
 ├── src/
 │   ├── __init__.py
-│   ├── levels.py       # grafos, guardas, maletas e grupos experimentais
+│   ├── levels.py       # grafos, guardas, maletas e configurações das fases
 │   ├── main.py         # execução pelo terminal
 │   ├── models.py       # estruturas de Level, State e guardas móveis
 │   ├── problem.py      # regras, transições e heurística
@@ -192,48 +221,22 @@ python -m src.main --level 1-12
 python -m src.main --level 1-12 --briefcase
 ```
 
-### Executar apenas BFS
+<img width="960" height="545" alt="image" src="https://github.com/user-attachments/assets/ce30906e-3991-4d98-a891-fc724d94ff98" />
 
-```bash
-python -m src.main --level 1-15 --algorithm bfs
-```
-
-### Executar apenas A*
-
-```bash
-python -m src.main --level 1-15 --algorithm astar
-```
+_"Exemplo de prompt no terminal para executar a fase 1-15"_
 
 ## Métricas exibidas
 
-Para cada execução são mostrados:
+Para cada execução são mostrados os caminhos encontrados por BFS e A* em forma de setas e uma tabela comparativa com:
 
-- solução encontrada;
-- custo da solução;
-- sequência de nós percorridos;
-- estados expandidos;
+- custo da solução em número de movimentos;
 - estados gerados;
+- estados explorados;
 - pico da fronteira;
 - tempo de execução.
 
-Exemplo de saída para a fase `1-12` utilizando A*:
-
-```text
-Algoritmo: A*
-Objetivo: objetivo final
-Solução encontrada: sim
-Custo: 16
-Caminho: N0 -> N5 -> N4 -> N5 -> N6 -> N11 -> N12 -> N7 -> N2 -> N7 -> N12 -> N11 -> N10 -> N9 -> N8 -> N3 -> N14
-Estados expandidos: 28
-Estados gerados: 36
-Pico da fronteira: 9
-Tempo: 0.00035316 s
-```
-
-O tempo exibido varia de acordo com a máquina e a execução. As demais métricas permitem comparar diretamente quanto do espaço de estados foi explorado por cada estratégia.
+As duas buscas são sempre executadas sobre a mesma fase para facilitar a comparação direta. O tempo pode variar entre execuções conforme o ambiente de execução.
 
 ## Observação sobre fidelidade ao jogo
 
-O objetivo deste projeto é estudar **algoritmos de busca**, e não reproduzir integralmente Hitman GO. Os níveis utilizados preservam a topologia e as mecânicas relevantes para os experimentos, validadas por comparação com o funcionamento observado no jogo.
-
-Elementos que não interferem no problema de busca estudado foram deixados de fora para manter o ambiente determinístico, controlado e adequado à comparação entre BFS e A*.
+O objetivo deste projeto é estudar **algoritmos de busca**, e não reproduzir integralmente Hitman GO. As fases usam a topologia e as mecânicas relevantes observadas nos layouts, mas alguns detalhes de resolução de turnos são abstrações determinísticas do simulador. Isso mantém o ambiente controlado e permite aplicar exatamente o mesmo problema à BFS e ao A*.

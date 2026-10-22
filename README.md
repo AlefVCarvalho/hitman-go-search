@@ -11,7 +11,7 @@ O domínio escolhido é inspirado em **Hitman GO**. O cenário é representado c
 - [Modelagem](#modelagem)
 - [Regras implementadas](#regras-implementadas)
 - [Estratégias de busca](#estratégias-de-busca)
-- [Fases Modeladas](#fases-modeladas)
+- [Fases modeladas](#fases-modeladas)
 - [Casos experimentais](#casos-experimentais)
 - [Estrutura do projeto](#estrutura-do-projeto)
 - [Como executar](#como-executar)
@@ -74,9 +74,9 @@ onde:
 
 As rotas completas dos guardas e o grafo da fase são dados fixos e **não são duplicados em cada estado**.
 
-<img width="500" height="500" alt="de068378-5a88-4c6f-8aee-b607008e8e54" src="https://github.com/user-attachments/assets/d17ad214-25fc-431d-a939-2c387098bc04" />
+<img width="500" height="500" alt="6bb6ad42-13aa-4291-b0f5-140afe9a3bcb" src="https://github.com/user-attachments/assets/34350b2c-1e25-48e1-9fff-150271aa2d2e" />
 
-_“Exemplo da numerção utilizada na transcrição da fase”_
+_“Exemplo da numeração utilizada na transcrição da fase”_
 
 ## Regras implementadas
 
@@ -193,10 +193,11 @@ hitman-go-search/
 ├── src/
 │   ├── __init__.py
 │   ├── levels.py       # grafos, guardas, maletas e configurações das fases
-│   ├── main.py         # execução pelo terminal
+│   ├── main.py         # execução e argumentos do terminal
 │   ├── models.py       # estruturas de Level, State e guardas móveis
-│   ├── problem.py      # regras, transições e heurística
-│   └── search.py       # BFS e A*
+│   ├── output.py       # formatação das saídas e visualização passo a passo
+│   ├── problem.py      # regras e transições do ambiente
+│   └── search.py       # BFS, A* e heurística
 ├── .gitignore
 └── README.md
 ```
@@ -221,13 +222,40 @@ python -m src.main --level 1-12
 python -m src.main --level 1-12 --briefcase
 ```
 
+### Visualizar a BFS passo a passo
+
+```bash
+python -m src.main --level 1-12 --bfs-step
+```
+
+Nesse modo, somente a BFS é executada. O terminal apresenta progressivamente a posição atual, a profundidade, as posições visitadas e os estados presentes na fronteira.
+
+### Visualizar o A* passo a passo
+
+```bash
+python -m src.main --level 1-12 --astar-step
+```
+
+Nesse modo, somente o A* é executado. Além das posições visitadas e da fronteira, são apresentados os valores utilizados na avaliação do estado:
+
+```text
+f = x / g = x / h = x
+```
+
+Os modos passo a passo também podem ser combinados com a exigência da maleta:
+
+```bash
+python -m src.main --level 1-15 --briefcase --bfs-step
+python -m src.main --level 1-15 --briefcase --astar-step
+```
+
 <img width="960" height="545" alt="image" src="https://github.com/user-attachments/assets/ce30906e-3991-4d98-a891-fc724d94ff98" />
 
 _"Exemplo de prompt no terminal para executar a fase 1-15"_
 
 ## Métricas exibidas
 
-Para cada execução são mostrados os caminhos encontrados por BFS e A* em forma de setas e uma tabela comparativa com:
+Na execução padrão, BFS e A* são aplicados sobre a mesma fase. São mostrados os caminhos encontrados em forma de setas e uma tabela comparativa com:
 
 - custo da solução em número de movimentos;
 - estados gerados;
@@ -235,7 +263,9 @@ Para cada execução são mostrados os caminhos encontrados por BFS e A* em form
 - pico da fronteira;
 - tempo de execução.
 
-As duas buscas são sempre executadas sobre a mesma fase para facilitar a comparação direta. O tempo pode variar entre execuções conforme o ambiente de execução.
+O tempo pode variar entre execuções conforme o ambiente de execução.
+
+Os comandos `--bfs-step` e `--astar-step` possuem finalidade demonstrativa. Nesses modos apenas a busca selecionada é executada e seu processo é exibido passo a passo, sem a tabela de comparação entre os algoritmos.
 
 ## Observação sobre fidelidade ao jogo
 

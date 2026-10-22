@@ -1,11 +1,15 @@
-# Define os níveis, grafos, guardas e grupos experimentais usados pelo projeto.
+# Fases que podem ser escolhidas no terminal
+# Cada fase informa o caminho possível entre os nós e onde ficam:
+# agente, saída, guardas e outros elementos do mapa
 from __future__ import annotations
 
 from .models import Level, MovingGuard
 
 
+# Fase 1-3: mapa pequeno, com 1 guarda fixo
 PHASE_1_3 = Level(
     name="Capítulo 1 - Fase 3",
+
     graph={
         "N0": ("N2",),
         "N1": ("N2", "N5"),
@@ -16,16 +20,20 @@ PHASE_1_3 = Level(
         "N6": ("N2", "N5", "N7"),
         "N7": ("N3", "N6"),
     },
+
     start="N4",
     goal="N0",
+
     guards={
         "N1": "N2",
     },
 )
 
 
+# Fase 1-4: mapa maior, com vários guardas parados
 PHASE_1_4 = Level(
     name="Capítulo 1 - Fase 4",
+
     graph={
         "N0": ("N1", "N4"),
         "N1": ("N0", "N2", "N5"),
@@ -46,8 +54,10 @@ PHASE_1_4 = Level(
         "N16": ("N11", "N15", "N17"),
         "N17": ("N12", "N16"),
     },
+
     start="N0",
     goal="N13",
+
     guards={
         "N3": "N7",
         "N5": "N1",
@@ -60,8 +70,10 @@ PHASE_1_4 = Level(
 )
 
 
+# Fase 1-12: guardas moveis, arbustos e maleta (opcional na fase)
 PHASE_1_12 = Level(
     name="Capítulo 1 - Fase 12",
+
     graph={
         "N0": ("N5",),
         "N1": ("N2", "N6"),
@@ -79,9 +91,12 @@ PHASE_1_12 = Level(
         "N13": ("N8", "N12"),
         "N14": ("N10",),
     },
+
     start="N13",
     goal="N11",
+
     guards={},
+
     moving_guards=(
         MovingGuard(
             name="amarelo_N7",
@@ -96,13 +111,17 @@ PHASE_1_12 = Level(
             start_direction=-1,
         ),
     ),
+
     hiding_nodes=frozenset({"N2", "N8"}),
+
     briefcase="N0",
 )
 
 
+# Fase 1-15: guardas fixos e móveis, arbusto e maleta
 PHASE_1_15 = Level(
     name="Capítulo 1 - Fase 15",
+
     graph={
         "N0": ("N5",),
         "N1": ("N2", "N6"),
@@ -128,13 +147,16 @@ PHASE_1_15 = Level(
         "N21": ("N20", "N22"),
         "N22": ("N18", "N21"),
     },
+
     start="N21",
     goal="N0",
+
     guards={
         "N10": "N5",
         "N13": "N8",
         "N1": "N6",
     },
+
     moving_guards=(
         MovingGuard(
             name="amarelo_N10",
@@ -161,11 +183,15 @@ PHASE_1_15 = Level(
             start_direction=-1,
         ),
     ),
+
     hiding_nodes=frozenset({"N11"}),
+
     briefcase="N14",
 )
 
 
+# Liga o número digitado no terminal e configuração da fase
+# encontra o mapa escolhido mais facil
 LEVELS = {
     "1-3": PHASE_1_3,
     "1-4": PHASE_1_4,
